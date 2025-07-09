@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Проверка на Цени</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f0f2f5; margin: 0; }
+        h1 { color: #333; text-align: center; }
+        #app-container { width: 100%; max-width: 600px; padding: 10px; }
+
+        #image-display-container { position: relative; margin-top: 15px; display: none; border: 1px solid #ddd; }
+        #captured-image, #drawing-canvas { width: 100%; display: block; }
+        #drawing-canvas { position: absolute; top: 0; left: 0; }
+        #camera-container { position: relative; background-color: #000; margin-top: 15px; display: none; }
+        video { width: 100%; display: block; }
+
+        /* --- UNIFIED STYLING FOR BUTTONS AND RESULT --- */
+        #start-camera-btn, #capture-btn, #reset-btn, #result {
+            box-sizing: border-box;
+            width: 100%;
+            margin: 15px 0 0 0;
+            padding: 15px;
+            font-size: 1.2em;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        #start-camera-btn, #capture-btn, #reset-btn {
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+        }
+
+        #start-camera-btn { background-color: #007bff; color: white; }
+        #capture-btn { background-color: #dc3545; color: white; display: none; }
+        /* NEW: Style for the 'Scan Again' button */
+        #reset-btn { background-color: #17a2b8; color: white; display: none; }
+        
+        #result { display: none; }
+
+        /* --- STATUS COLORS --- */
+        .correct { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .incorrect { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .error { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; }
+        .too-far { background-color: #ffc107; border: 1px solid #d39e00; color: #333; }
+        .loader { border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; display: none; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        <h1>Проверка на Цени BGN / EUR</h1>
+        <button id="start-camera-btn">Старт на Камерата</button>
+        
+        <div id="camera-container">
+            <video id="camera-stream" playsinline autoplay></video>
+        </div>
+
+        <button id="capture-btn">Заснеми и Провери</button>
+
+        <div id="image-display-container">
+            <img id="captured-image" />
+            <canvas id="drawing-canvas"></canvas>
+        </div>
+
+        <div id="loader" class="loader"></div>
+        <div id="result"></div>
+        
+        <!-- NEW: The 'Scan Again' button -->
+        <button id="reset-btn">Сканирай Отново</button>
+
+    </div>
+
+    <script>
+        // DOM Elements
+        const startCameraBtn = document.getElementById('start-camera-btn');
+        const captureBtn = document.getElementById('capture-btn');
+        const resetBtn = document.getElementById('reset-btn'); // NEW
+        const cameraContainer = document.getElementById('camera-container');
+        const videoElement = document.getElementById('camera-stream');
+        const resultDiv = document.getElementById('result');
+        const loader = document.getElementById('loader');
+        const imageDisplayContainer = document.getElementById('image-display-container');
+        const capturedImage = document.getElementById('captured-image');
+        const drawingCanvas = document.getElementById('drawing-canvas');
+        
+        const API_URL = 'http://127.0.0.1:5000/api/verify-prices';
+
+        // --- Event Listeners ---
+        startCameraBtn.addEventListener('click', startCamera);
+        captureBtn.addEventListener('click', captureAndVerify);
+        resetBtn.addEventListener('click', resetApp); // NEW
+
+        // --- Main Functions ---
+
+        function startCamera() {
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then(stream => {
+                    videoElement.srcObject = stream;
+                    // Transition to camera view
+                    startCameraBtn.style.display = 'none';
+                    cameraContainer.style.display = 'block';
+                    captureBtn.style.display = 'block';
+                })
+                .catch(err => {
+                    displayError("Не можах да достъпя камерата. Моля, дайте разрешение и опитайте отново.");
+                    console.error("Camera Error:", err);
+                });
+        }
+
+        function captureAndVerify() {
+            // Hide camera and capture button
+            cameraContainer.style.display = 'none';
+            captureBtn.style.display = 'none';
+            loader.style.display = 'block'; // Show loader
+
+            // Create a temporary canvas to get the image data
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = videoElement.videoWidth;
+            tempCanvas.height = videoElement.videoHeight;
+            const context = tempCanvas.getContext('2d');
+            context.drawImage(videoElement, 0, 0, tempCanvas.width, tempCanvas.height);
+            
+            // Display the captured image
+            capturedImage.src = tempCanvas.toDataURL('image/jpeg');
+            imageDisplayContainer.style.display = 'block';
+
+            // Prepare the drawing canvas
+            drawingCanvas.width = tempCanvas.width;
+            drawingCanvas.height = tempCanvas.height;
+
+            // Send image to backend
+            tempCanvas.toBlob(async (blob) => {
+                const formData = new FormData();
+                formData.append('file', blob, 'capture.jpg');
+                
+                try {
+                    const response = await fetch(API_URL, { method: 'POST', body: formData });
+                    const data = await response.json();
+                    displayResults(data);
+                } catch (error) {
+                    displayError('Не мога да се свържа със сървъра. Работи ли?');
+                    console.error('Fetch Error:', error);
+                } finally {
+                    loader.style.display = 'none';
+                }
+            }, 'image/jpeg');
+        }
+
+        function displayResults(data) {
+            const ctx = drawingCanvas.getContext('2d');
+            ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+
+            // Only draw rectangles if the status is correct/incorrect and we have data
+            if (data.data && data.data.bgn_box) {
+                drawBoundingBox(ctx, data.data.bgn_box, 'red');
+                drawBoundingBox(ctx, data.data.eur_box, 'red');
+            }
+            
+            // Display text status
+            let html = `<h3>${data.status}</h3><p>${data.message}</p>`;
+            if (data.data && data.status.toLowerCase() !== 'too-far') { // Don't show price details on warning
+                html += `<p>
+                    <strong>Цена (BGN):</strong> ${data.data.found_bgn.toFixed(2)} лв<br>
+                    <strong>Цена (EUR):</strong> €${data.data.found_eur.toFixed(2)}<br>
+                    <strong>Очаквана (EUR):</strong> €${data.data.expected_eur.toFixed(2)}
+                </p>`;
+            }
+            resultDiv.innerHTML = html;
+            resultDiv.className = `result ${data.status.toLowerCase()}`;
+            resultDiv.style.display = 'block';
+
+            // Show the 'Scan Again' button for all outcomes
+            resetBtn.style.display = 'block';
+        }
+
+        function displayError(message) {
+            resultDiv.innerHTML = `<h3>ERROR</h3><p>${message}</p>`;
+            resultDiv.className = 'result error';
+            resultDiv.style.display = 'block';
+        }
+
+        function drawBoundingBox(ctx, vertices, color) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = Math.max(3, ctx.canvas.width * 0.005);
+            ctx.beginPath();
+            ctx.moveTo(vertices[0].x, vertices[0].y);
+            for (let i = 1; i < vertices.length; i++) ctx.lineTo(vertices[i].x, vertices[i].y);
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        // NEW: Function to reset the UI to the camera view
+        function resetApp() {
+            // Hide results and the image
+            resultDiv.style.display = 'none';
+            imageDisplayContainer.style.display = 'none';
+            resetBtn.style.display = 'none';
+
+            // Show the live camera and capture button again
+            cameraContainer.style.display = 'block';
+            captureBtn.style.display = 'block';
+        }
+
+    </script>
+</body>
+</html>
