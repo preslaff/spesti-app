@@ -1,0 +1,12 @@
+# backend/requirements.txt
+
+# Web Framework and Production Server
+Flask
+gunicorn
+Flask-Cors
+
+# Google Cloud API for OCR
+google-cloud-vision
+
+# Image processing library
+Pillow

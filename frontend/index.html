@@ -4,16 +4,70 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Проверка на Цени</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f0f2f5; margin: 0; }
-        h1 { color: #333; text-align: center; }
-        #app-container { width: 100%; max-width: 600px; padding: 10px; }
+        <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f2f5;
+            margin: 0;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        /* --- PROBLEM 1 SOLVED: Add padding for "breathing room" --- */
+        #app-container {
+            width: 100%;
+            max-width: 600px;
+            padding: 0 15px; /* Add 15px of space on the left and right */
+            box-sizing: border-box; /* Ensures padding is inside the width */
+        }
 
-        #image-display-container { position: relative; margin-top: 15px; display: none; border: 1px solid #ddd; }
-        #captured-image, #drawing-canvas { width: 100%; display: block; }
-        #drawing-canvas { position: absolute; top: 0; left: 0; }
-        #camera-container { position: relative; background-color: #000; margin-top: 15px; display: none; }
-        video { width: 100%; display: block; }
+        /* --- PROBLEM 2 SOLVED: Force a square aspect ratio for the camera --- */
+        #camera-container {
+            width: 100%;
+            aspect-ratio: 1 / 1; /* This creates a perfect square! */
+            position: relative;
+            background-color: #000;
+            margin-top: 15px;
+            display: none;
+            border-radius: 10px; /* Optional: adds nice rounded corners */
+            overflow: hidden; /* Hides parts of the video that overflow the square */
+        }
+        #camera-container video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* CRUCIAL: Fills the square without distorting the video */
+        }
+        
+        /* Apply the same square style to the captured image for consistency */
+        #image-display-container {
+            position: relative;
+            margin-top: 15px;
+            display: none;
+            border: 1px solid #ddd;
+            border-radius: 10px; /* Match the camera view */
+            overflow: hidden; /* Match the camera view */
+        }
+        #image-display-container img {
+            width: 100%;
+            display: block;
+            aspect-ratio: 1 / 1; /* Make the image display as a square */
+            object-fit: cover; /* Ensure the captured content fills the square */
+        }
+
+        #drawing-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
 
         /* --- UNIFIED STYLING FOR BUTTONS AND RESULT --- */
         #start-camera-btn, #capture-btn, #reset-btn, #result {
@@ -25,18 +79,14 @@
             border-radius: 10px;
             text-align: center;
         }
-
         #start-camera-btn, #capture-btn, #reset-btn {
             font-weight: bold;
             border: none;
             cursor: pointer;
         }
-
         #start-camera-btn { background-color: #007bff; color: white; }
         #capture-btn { background-color: #dc3545; color: white; display: none; }
-        /* NEW: Style for the 'Scan Again' button */
         #reset-btn { background-color: #17a2b8; color: white; display: none; }
-        
         #result { display: none; }
 
         /* --- STATUS COLORS --- */
@@ -44,6 +94,7 @@
         .incorrect { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
         .error { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; }
         .too-far { background-color: #ffc107; border: 1px solid #d39e00; color: #333; }
+        
         .loader { border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; display: none; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
