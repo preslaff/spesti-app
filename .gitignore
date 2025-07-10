@@ -1,6 +1,7 @@
 # --- Credentials ---
 # This is the MOST IMPORTANT line. Never commit your secret credentials.
 backend/gcp_credentials.json
+frontend/config.js
 
 # Also ignore any other potential key files
 *.pem

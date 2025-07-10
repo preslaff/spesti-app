@@ -122,7 +122,7 @@
         <button id="reset-btn">Сканирай Отново</button>
 
     </div>
-
+	<script src="config.js"></script>
     <script>
         // DOM Elements
         const startCameraBtn = document.getElementById('start-camera-btn');
@@ -136,7 +136,6 @@
         const capturedImage = document.getElementById('captured-image');
         const drawingCanvas = document.getElementById('drawing-canvas');
         
-        const API_URL = 'http://127.0.0.1:5000/api/verify-prices';
 
         // --- Event Listeners ---
         startCameraBtn.addEventListener('click', startCamera);
