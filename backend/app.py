@@ -3,21 +3,21 @@ import re
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from google.cloud import vision
-from PIL import Image # NEW: Import the Pillow library
-import io # NEW: Needed to read image data in memory
+from PIL import Image
+import io
 
-# --- INITIAL SETUP ---
+#INITIAL SETUP
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'gcp_credentials.json'
 app = Flask(__name__)
 CORS(app)
 vision_client = vision.ImageAnnotatorClient()
 BGN_TO_EUR_RATE = 1.95583
 
-# NEW: Define our threshold. If the price's height is less than 3% of the
+# If the price's height is less than 3% of the
 # image's total height, we'll consider it too small.
 MIN_RELATIVE_HEIGHT_THRESHOLD = 0.03 
 
-# --- HELPER FUNCTIONS (Unchanged) ---
+#HELPER FUNCTIONS
 def calculate_area(vertices):
     x_coords = [v.x for v in vertices]
     y_coords = [v.y for v in vertices]
@@ -28,7 +28,7 @@ def parse_price_string(s):
     try: return float(s.replace(',', '.'))
     except (ValueError, TypeError): return None
 
-# --- API ENDPOINT: THE MAIN LOGIC (Updated) ---
+#API ENDPOINT
 
 @app.route('/api/verify-prices', methods=['POST'])
 def verify_prices():
@@ -38,14 +38,14 @@ def verify_prices():
     file = request.files['file']
     image_content = file.read()
     
-    # --- NEW: Get image dimensions with Pillow ---
+    
     try:
         image_for_dims = Image.open(io.BytesIO(image_content))
         image_width, image_height = image_for_dims.size
     except Exception as e:
         return jsonify({"status": "ГРЕШКА", "message": f"Невалиден файл с изображение: {e}"})
 
-    # --- Perform OCR ---
+    #Perform OCR
     image = vision.Image(content=image_content)
     response = vision_client.text_detection(image=image)
     annotations = response.text_annotations
@@ -53,7 +53,7 @@ def verify_prices():
     if not annotations:
         return jsonify({"status": "ГРЕШКА", "message": "Не можах да разчета текст."})
 
-    # --- Find Price Candidates (Unchanged) ---
+    #Find Price Candidates
     price_candidates = []
     price_pattern = re.compile(r'^\d+([.,]\d{1,2})?$')
     for annotation in annotations[1:]:
@@ -71,7 +71,7 @@ def verify_prices():
 
     price_candidates.sort(key=lambda p: p['area'], reverse=True)
     
-    # --- NEW: Proximity Check ---
+    #Proximity Check
     largest_price_box = price_candidates[0]['box']
     box_height = max(v['y'] for v in largest_price_box) - min(v['y'] for v in largest_price_box)
     
@@ -79,12 +79,12 @@ def verify_prices():
     
     if relative_height < MIN_RELATIVE_HEIGHT_THRESHOLD:
         return jsonify({
-            "status": "TOO-FAR", # A new status for the frontend
+            "status": "TOO-FAR",
             "message": "Приближете се до етикета и опитайте отново."
         })
-    # --- End of Proximity Check ---
+    
 
-    # --- Verification Logic (The rest is the same) ---
+    #Verification
     largest_price_1 = price_candidates[0]
     largest_price_2 = price_candidates[1]
 

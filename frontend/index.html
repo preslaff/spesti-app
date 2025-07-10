@@ -118,13 +118,13 @@
         <div id="loader" class="loader"></div>
         <div id="result"></div>
         
-        <!-- NEW: The 'Scan Again' button -->
+        
         <button id="reset-btn">Сканирай Отново</button>
 
     </div>
 	<script src="config.js"></script>
     <script>
-        // DOM Elements
+        //DOM Elements
         const startCameraBtn = document.getElementById('start-camera-btn');
         const captureBtn = document.getElementById('capture-btn');
         const resetBtn = document.getElementById('reset-btn'); // NEW
@@ -137,18 +137,18 @@
         const drawingCanvas = document.getElementById('drawing-canvas');
         
 
-        // --- Event Listeners ---
+        //Event Listeners
         startCameraBtn.addEventListener('click', startCamera);
         captureBtn.addEventListener('click', captureAndVerify);
         resetBtn.addEventListener('click', resetApp); // NEW
 
-        // --- Main Functions ---
+        //Main Functions
 
         function startCamera() {
             navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
                 .then(stream => {
                     videoElement.srcObject = stream;
-                    // Transition to camera view
+                    //Transition to camera view
                     startCameraBtn.style.display = 'none';
                     cameraContainer.style.display = 'block';
                     captureBtn.style.display = 'block';
@@ -160,27 +160,27 @@
         }
 
         function captureAndVerify() {
-            // Hide camera and capture button
+            //Hide camera and capture button
             cameraContainer.style.display = 'none';
             captureBtn.style.display = 'none';
-            loader.style.display = 'block'; // Show loader
+            loader.style.display = 'block';
 
-            // Create a temporary canvas to get the image data
+            //Create a temporary canvas to get the image data
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = videoElement.videoWidth;
             tempCanvas.height = videoElement.videoHeight;
             const context = tempCanvas.getContext('2d');
             context.drawImage(videoElement, 0, 0, tempCanvas.width, tempCanvas.height);
             
-            // Display the captured image
+            //Display the captured image
             capturedImage.src = tempCanvas.toDataURL('image/jpeg');
             imageDisplayContainer.style.display = 'block';
 
-            // Prepare the drawing canvas
+            //Prepare the drawing canvas
             drawingCanvas.width = tempCanvas.width;
             drawingCanvas.height = tempCanvas.height;
 
-            // Send image to backend
+            //Send image to backend
             tempCanvas.toBlob(async (blob) => {
                 const formData = new FormData();
                 formData.append('file', blob, 'capture.jpg');
@@ -202,13 +202,13 @@
             const ctx = drawingCanvas.getContext('2d');
             ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
 
-            // Only draw rectangles if the status is correct/incorrect and we have data
+            //Only draw rectangles if the status is correct/incorrect and we have data
             if (data.data && data.data.bgn_box) {
                 drawBoundingBox(ctx, data.data.bgn_box, 'red');
                 drawBoundingBox(ctx, data.data.eur_box, 'red');
             }
             
-            // Display text status
+            //Display text status
             let html = `<h3>${data.status}</h3><p>${data.message}</p>`;
             if (data.data && data.status.toLowerCase() !== 'too-far') { // Don't show price details on warning
                 html += `<p>
