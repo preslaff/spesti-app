@@ -61,11 +61,20 @@
             transform: translate(-50%, -50%);
             object-fit: cover;
         }
-
-        /* NEW: Class to fix mobile camera rotation */
+        
+        /* This class is ONLY for the absolutely-positioned video */
         .video-rotated {
             transform: translate(-50%, -50%) rotate(90deg);
         }
+
+        /* --- THE FIX: A new, dedicated class for rotating the containers --- */
+        .container-rotated {
+            transform: rotate(90deg);
+            /* Because the container is a square (aspect-ratio: 1/1), rotating it
+               doesn't change its dimensions in the layout flow, so no other
+               properties are needed. */
+        }
+
 
         #image-display-container {
             position: relative;
@@ -91,6 +100,7 @@
             height: 100%;
         }
 
+        /* --- UNIFIED STYLING (Unchanged) --- */
         #start-camera-btn,
         #capture-btn,
         #reset-btn,
@@ -116,7 +126,8 @@
         #capture-btn { background-color: #dc3545; color: white; display: none; }
         #reset-btn { background-color: #17a2b8; color: white; display: none; }
         #result { display: none; }
-
+        
+        /* --- STATUS COLORS (Unchanged) --- */
         .correct { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
         .incorrect { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
         .error { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; }
@@ -168,9 +179,8 @@
 
     </div>
     <script src="config.js"></script>
-        <script src="config.js"></script>
     <script>
-        // DOM Elements are unchanged
+        // --- DOM Elements and Event Listeners are unchanged ---
         const placeholderContainer = document.getElementById('placeholder-container');
         const startCameraBtn = document.getElementById('start-camera-btn');
         const captureBtn = document.getElementById('capture-btn');
@@ -183,7 +193,6 @@
         const capturedImage = document.getElementById('captured-image');
         const drawingCanvas = document.getElementById('drawing-canvas');
 
-        // Event Listeners are unchanged
         startCameraBtn.addEventListener('click', startCamera);
         captureBtn.addEventListener('click', captureAndVerify);
         resetBtn.addEventListener('click', resetApp);
@@ -225,9 +234,7 @@
             const context = tempCanvas.getContext('2d');
             const isRotated = videoElement.classList.contains('video-rotated');
 
-            // --- Part 1: Create the correctly oriented image data ---
-            // This part is correct and remains the same. It ensures the backend
-            // always receives an upright image.
+            // Part 1: Create correctly oriented image data (Unchanged)
             if (isRotated) {
                 tempCanvas.width = videoElement.videoHeight;
                 tempCanvas.height = videoElement.videoWidth;
@@ -242,15 +249,14 @@
                 context.drawImage(videoElement, 0, 0, tempCanvas.width, tempCanvas.height);
             }
 
-            // --- Part 2: THE FIX - Rotate the display container ---
-            // We apply the same rotation class to the container that holds the final image.
+            // --- THE FIX: Use the new, correct class for the container ---
             if (isRotated) {
-                imageDisplayContainer.classList.add('video-rotated');
+                imageDisplayContainer.classList.add('container-rotated'); // Use the new class
             } else {
-                imageDisplayContainer.classList.remove('video-rotated');
+                imageDisplayContainer.classList.remove('container-rotated'); // Remove the new class
             }
             
-            // --- Part 3: Display the image and proceed ---
+            // Part 3: Display image and proceed (Unchanged)
             capturedImage.src = tempCanvas.toDataURL('image/jpeg');
             imageDisplayContainer.style.display = 'block';
             drawingCanvas.width = tempCanvas.width;
@@ -272,20 +278,16 @@
             }, 'image/jpeg');
         }
 
-        // --- UPDATED displayResults function to simplify drawing ---
+        // --- displayResults function is now simple again ---
         function displayResults(data) {
             const ctx = drawingCanvas.getContext('2d');
             ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
 
-            // The drawing logic is now simple. We ALWAYS draw the coordinates as they
-            // are received, because the backend ALWAYS sees an upright image.
-            // The CSS rotation of the parent container handles the visual display.
             if (data.data && data.data.bgn_box) {
                 drawBoundingBox(ctx, data.data.bgn_box, 'red');
                 drawBoundingBox(ctx, data.data.eur_box, 'red');
             }
 
-            // The rest of the function is unchanged...
             let html = `<h3>${data.status}</h3><p>${data.message}</p>`;
             if (data.data && !data.status.toLowerCase().includes('далеч')) {
                 html += `<p>
@@ -300,6 +302,7 @@
             resetBtn.style.display = 'block';
         }
 
+        // drawBoundingBox is unchanged
         function drawBoundingBox(ctx, vertices, color) {
             ctx.strokeStyle = color;
             ctx.lineWidth = Math.max(3, ctx.canvas.width * 0.005);
@@ -310,19 +313,20 @@
             ctx.stroke();
         }
 
-        // --- UPDATED resetApp function to remove the rotation class ---
+        // --- UPDATED resetApp function ---
         function resetApp() {
             resultDiv.style.display = 'none';
             imageDisplayContainer.style.display = 'none';
             resetBtn.style.display = 'none';
 
-            // Also remove the rotation class from the container when we reset
-            imageDisplayContainer.classList.remove('video-rotated');
+            // --- THE FIX: Make sure to remove the new class on reset ---
+            imageDisplayContainer.classList.remove('container-rotated');
 
             cameraContainer.style.display = 'block';
             captureBtn.style.display = 'block';
         }
 
+        // displayError is unchanged
         function displayError(message) {
             resultDiv.innerHTML = `<h3>ГРЕШКА</h3><p>${message}</p>`;
             resultDiv.className = 'result грешка';
