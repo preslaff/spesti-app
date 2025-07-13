@@ -26,7 +26,6 @@
             box-sizing: border-box;
         }
 
-        /* --- NEW: Styling for the placeholder image --- */
         #placeholder-container {
             margin-top: 15px;
             border: 1px solid #ddd;
@@ -53,11 +52,19 @@
 
         #camera-container video {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 50%;
+            left: 50%;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            transform: translate(-50%, -50%);
             object-fit: cover;
+        }
+
+        /* NEW: Class to fix mobile camera rotation */
+        .video-rotated {
+            transform: translate(-50%, -50%) rotate(90deg);
         }
 
         #image-display-container {
@@ -84,7 +91,6 @@
             height: 100%;
         }
 
-        /* --- UNIFIED STYLING FOR BUTTONS AND RESULT --- */
         #start-camera-btn,
         #capture-btn,
         #reset-btn,
@@ -106,52 +112,15 @@
             cursor: pointer;
         }
 
-        #start-camera-btn {
-            background-color: #007bff;
-            color: white;
-        }
+        #start-camera-btn { background-color: #007bff; color: white; }
+        #capture-btn { background-color: #dc3545; color: white; display: none; }
+        #reset-btn { background-color: #17a2b8; color: white; display: none; }
+        #result { display: none; }
 
-        #capture-btn {
-            background-color: #dc3545;
-            color: white;
-            display: none;
-        }
-
-        #reset-btn {
-            background-color: #17a2b8;
-            color: white;
-            display: none;
-        }
-
-        #result {
-            display: none;
-        }
-
-        /* --- STATUS COLORS --- */
-        .correct {
-            background-color: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
-        }
-
-        .incorrect {
-            background-color: #f8d7da;
-            border: 1px solid #f5c6cb;
-            color: #721c24;
-        }
-
-        .error,
-        .too-far {
-            background-color: #fff3cd;
-            border: 1px solid #ffeeba;
-            color: #856404;
-        }
-
-        .too-far {
-            background-color: #ffc107;
-            border: 1px solid #d39e00;
-            color: #333;
-        }
+        .правилно { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .неправилно { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .грешка { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; }
+        .твърде-далеч { background-color: #ffc107; border: 1px solid #d39e00; color: #333; }
 
         .loader {
             border: 5px solid #f3f3f3;
@@ -165,13 +134,8 @@
         }
 
         @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -180,7 +144,6 @@
     <div id="app-container">
         <h1>Проверка на Цени BGN / EUR</h1>
 
-        <!-- NEW: The placeholder image that shows on load -->
         <div id="placeholder-container">
             <img src="assets/placeholder.jpg" alt="Пример за сканиране на етикет">
         </div>
@@ -205,10 +168,9 @@
 
     </div>
     <script src="config.js"></script>
-        <script src="config.js"></script>
     <script>
-        //DOM Elements
-        const placeholderContainer = document.getElementById('placeholder-container'); // NEW
+        // DOM Elements
+        const placeholderContainer = document.getElementById('placeholder-container');
         const startCameraBtn = document.getElementById('start-camera-btn');
         const captureBtn = document.getElementById('capture-btn');
         const resetBtn = document.getElementById('reset-btn');
@@ -220,65 +182,95 @@
         const capturedImage = document.getElementById('captured-image');
         const drawingCanvas = document.getElementById('drawing-canvas');
 
-
-        //Event Listeners
+        // Event Listeners
         startCameraBtn.addEventListener('click', startCamera);
         captureBtn.addEventListener('click', captureAndVerify);
         resetBtn.addEventListener('click', resetApp);
 
-        //Main Functions
+        // --- NEW: Function to handle device orientation ---
+        function handleOrientation() {
+            // Check if the screen is taller than it is wide (portrait mode)
+            if (window.screen.orientation.type.includes('portrait')) {
+                console.log("Portrait mode detected, rotating video.");
+                videoElement.classList.add('video-rotated');
+            } else {
+                console.log("Landscape mode detected, no rotation needed.");
+                videoElement.classList.remove('video-rotated');
+            }
+        }
 
+        // --- UPDATED startCamera function to include orientation check ---
         function startCamera() {
             navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: 'environment'
-                    }
+                    video: { facingMode: 'environment' }
                 })
                 .then(stream => {
                     videoElement.srcObject = stream;
-                    //Transition to camera view
-                    placeholderContainer.style.display = 'none'; // Hide the placeholder
+                    
+                    // Listen for future orientation changes
+                    window.screen.orientation.addEventListener('change', handleOrientation);
+                    
+                    // Run the check once immediately
+                    handleOrientation();
+
+                    // Transition to camera view
+                    placeholderContainer.style.display = 'none';
                     startCameraBtn.style.display = 'none';
                     cameraContainer.style.display = 'block';
                     captureBtn.style.display = 'block';
                 })
                 .catch(err => {
-                    displayError("Не можах да достъпя камерата. Моля, дайте разрешение и опитайте отново.");
+                    displayError("Не можах да достъпя камерата. Моля, дайте разрешение.");
                     console.error("Camera Error:", err);
                 });
         }
 
+        // --- UPDATED captureAndVerify function to handle canvas rotation ---
         function captureAndVerify() {
-            //Hide camera and capture button
             cameraContainer.style.display = 'none';
             captureBtn.style.display = 'none';
             loader.style.display = 'block';
 
             const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = videoElement.videoWidth;
-            tempCanvas.height = videoElement.videoHeight;
             const context = tempCanvas.getContext('2d');
-            context.drawImage(videoElement, 0, 0, tempCanvas.width, tempCanvas.height);
+            
+            const isRotated = videoElement.classList.contains('video-rotated');
+
+            // Set canvas dimensions correctly based on rotation
+            if (isRotated) {
+                tempCanvas.width = videoElement.videoHeight;
+                tempCanvas.height = videoElement.videoWidth;
+            } else {
+                tempCanvas.width = videoElement.videoWidth;
+                tempCanvas.height = videoElement.videoHeight;
+            }
+
+            context.save();
+            
+            if (isRotated) {
+                context.translate(tempCanvas.width / 2, tempCanvas.height / 2);
+                context.rotate(90 * Math.PI / 180);
+                context.drawImage(videoElement, -videoElement.videoWidth / 2, -videoElement.videoHeight / 2, videoElement.videoWidth, videoElement.videoHeight);
+            } else {
+                context.drawImage(videoElement, 0, 0, videoElement.videoWidth, videoElement.videoHeight);
+            }
+            
+            context.restore();
 
             capturedImage.src = tempCanvas.toDataURL('image/jpeg');
             imageDisplayContainer.style.display = 'block';
-
             drawingCanvas.width = tempCanvas.width;
             drawingCanvas.height = tempCanvas.height;
 
             tempCanvas.toBlob(async (blob) => {
                 const formData = new FormData();
                 formData.append('file', blob, 'capture.jpg');
-
                 try {
-                    const response = await fetch(API_URL, {
-                        method: 'POST',
-                        body: formData
-                    });
+                    const response = await fetch(API_URL, { method: 'POST', body: formData });
                     const data = await response.json();
                     displayResults(data);
                 } catch (error) {
-                    displayError('Не мога да се свържа със сървъра. Работи ли?');
+                    displayError('Не мога да се свържа със сървъра.');
                     console.error('Fetch Error:', error);
                 } finally {
                     loader.style.display = 'none';
@@ -291,12 +283,23 @@
             ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
 
             if (data.data && data.data.bgn_box) {
-                drawBoundingBox(ctx, data.data.bgn_box, 'red');
-                drawBoundingBox(ctx, data.data.eur_box, 'red');
+                // Adjust drawing coordinates for rotated canvas
+                const w = drawingCanvas.width;
+                const h = drawingCanvas.height;
+                const bgnBoxRotated = data.data.bgn_box.map(p => ({ x: w - p.y, y: p.x }));
+                const eurBoxRotated = data.data.eur_box.map(p => ({ x: w - p.y, y: p.x }));
+                
+                const isRotated = videoElement.classList.contains('video-rotated');
+                if (isRotated) {
+                    drawBoundingBox(ctx, bgnBoxRotated, 'red');
+                    drawBoundingBox(ctx, eurBoxRotated, 'red');
+                } else {
+                    drawBoundingBox(ctx, data.data.bgn_box, 'red');
+                }
             }
 
             let html = `<h3>${data.status}</h3><p>${data.message}</p>`;
-            if (data.data && data.status.toLowerCase() !== 'too-far') {
+            if (data.data && !data.status.toLowerCase().includes('далеч')) {
                 html += `<p>
                     <strong>Цена (BGN):</strong> ${data.data.found_bgn.toFixed(2)} лв<br>
                     <strong>Цена (EUR):</strong> €${data.data.found_eur.toFixed(2)}<br>
@@ -304,15 +307,15 @@
                 </p>`;
             }
             resultDiv.innerHTML = html;
-            resultDiv.className = `result ${data.status.toLowerCase()}`;
+            // Use includes for more robust matching of Bulgarian class names
+            resultDiv.className = `result ${data.status.toLowerCase().replace(/\s+/g, '-')}`;
             resultDiv.style.display = 'block';
-
             resetBtn.style.display = 'block';
         }
 
         function displayError(message) {
-            resultDiv.innerHTML = `<h3>ERROR</h3><p>${message}</p>`;
-            resultDiv.className = 'result error';
+            resultDiv.innerHTML = `<h3>ГРЕШКА</h3><p>${message}</p>`;
+            resultDiv.className = 'result грешка';
             resultDiv.style.display = 'block';
         }
 
@@ -326,16 +329,10 @@
             ctx.stroke();
         }
 
-        // --- THE CORRECTED resetApp FUNCTION ---
         function resetApp() {
-            // Hide results and the image
             resultDiv.style.display = 'none';
             imageDisplayContainer.style.display = 'none';
             resetBtn.style.display = 'none';
-
-            // placeholderContainer.style.display = 'block'; // THIS LINE WAS THE BUG AND IS NOW REMOVED.
-
-            // Show the live camera and capture button again
             cameraContainer.style.display = 'block';
             captureBtn.style.display = 'block';
         }
