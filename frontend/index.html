@@ -170,10 +170,26 @@
             loader.style.display = 'block';
 
             const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = videoElement.videoWidth;
-            tempCanvas.height = videoElement.videoHeight;
             const context = tempCanvas.getContext('2d');
-            context.drawImage(videoElement, 0, 0, tempCanvas.width, tempCanvas.height);
+            
+            // --- THIS IS THE DATA FIX ---
+            // The raw video is landscape (e.g., 1280x720), but we want a portrait capture.
+            // 1. Swap the canvas dimensions to match the desired portrait output.
+            tempCanvas.width = videoElement.videoHeight;
+            tempCanvas.height = videoElement.videoWidth;
+
+            // 2. Rotate the canvas context by -90 degrees (counter-clockwise) to counteract
+            //    the clockwise rotation of the raw video stream.
+            context.rotate(-90 * Math.PI / 180);
+
+            // 3. After rotation, the canvas's coordinate system is shifted. We need to
+            //    translate it back so that when we draw the image at (0,0), it appears
+            //    correctly within the new rotated bounds.
+            context.translate(-tempCanvas.height, 0);
+
+            // 4. Now, draw the original video stream onto the transformed canvas.
+            context.drawImage(videoElement, 0, 0);
+            // --- END OF DATA FIX ---
             
             capturedImage.src = tempCanvas.toDataURL('image/jpeg');
             imageDisplayContainer.style.display = 'block';
