@@ -168,8 +168,9 @@
 
     </div>
     <script src="config.js"></script>
+        <script src="config.js"></script>
     <script>
-        // DOM Elements
+        // DOM Elements are unchanged
         const placeholderContainer = document.getElementById('placeholder-container');
         const startCameraBtn = document.getElementById('start-camera-btn');
         const captureBtn = document.getElementById('capture-btn');
@@ -182,50 +183,39 @@
         const capturedImage = document.getElementById('captured-image');
         const drawingCanvas = document.getElementById('drawing-canvas');
 
-        // Event Listeners
+        // Event Listeners are unchanged
         startCameraBtn.addEventListener('click', startCamera);
         captureBtn.addEventListener('click', captureAndVerify);
         resetBtn.addEventListener('click', resetApp);
 
-        // --- NEW: Function to handle device orientation ---
+        // --- handleOrientation function is unchanged ---
         function handleOrientation() {
-            // Check if the screen is taller than it is wide (portrait mode)
             if (window.screen.orientation.type.includes('portrait')) {
-                console.log("Portrait mode detected, rotating video.");
                 videoElement.classList.add('video-rotated');
             } else {
-                console.log("Landscape mode detected, no rotation needed.");
                 videoElement.classList.remove('video-rotated');
             }
         }
 
-        // --- UPDATED startCamera function to include orientation check ---
+        // --- startCamera function is unchanged ---
         function startCamera() {
             navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment' }
-                })
-                .then(stream => {
-                    videoElement.srcObject = stream;
-                    
-                    // Listen for future orientation changes
-                    window.screen.orientation.addEventListener('change', handleOrientation);
-                    
-                    // Run the check once immediately
-                    handleOrientation();
-
-                    // Transition to camera view
-                    placeholderContainer.style.display = 'none';
-                    startCameraBtn.style.display = 'none';
-                    cameraContainer.style.display = 'block';
-                    captureBtn.style.display = 'block';
-                })
-                .catch(err => {
-                    displayError("Не можах да достъпя камерата. Моля, дайте разрешение.");
-                    console.error("Camera Error:", err);
-                });
+                video: { facingMode: 'environment' }
+            }).then(stream => {
+                videoElement.srcObject = stream;
+                window.screen.orientation.addEventListener('change', handleOrientation);
+                handleOrientation();
+                placeholderContainer.style.display = 'none';
+                startCameraBtn.style.display = 'none';
+                cameraContainer.style.display = 'block';
+                captureBtn.style.display = 'block';
+            }).catch(err => {
+                displayError("Не можах да достъпя камерата. Моля, дайте разрешение.");
+                console.error("Camera Error:", err);
+            });
         }
 
-        // --- UPDATED captureAndVerify function to handle canvas rotation ---
+        // --- UPDATED captureAndVerify function ---
         function captureAndVerify() {
             cameraContainer.style.display = 'none';
             captureBtn.style.display = 'none';
@@ -233,30 +223,34 @@
 
             const tempCanvas = document.createElement('canvas');
             const context = tempCanvas.getContext('2d');
-            
             const isRotated = videoElement.classList.contains('video-rotated');
 
-            // Set canvas dimensions correctly based on rotation
+            // --- Part 1: Create the correctly oriented image data ---
+            // This part is correct and remains the same. It ensures the backend
+            // always receives an upright image.
             if (isRotated) {
                 tempCanvas.width = videoElement.videoHeight;
                 tempCanvas.height = videoElement.videoWidth;
-            } else {
-                tempCanvas.width = videoElement.videoWidth;
-                tempCanvas.height = videoElement.videoHeight;
-            }
-
-            context.save();
-            
-            if (isRotated) {
+                context.save();
                 context.translate(tempCanvas.width / 2, tempCanvas.height / 2);
                 context.rotate(90 * Math.PI / 180);
                 context.drawImage(videoElement, -videoElement.videoWidth / 2, -videoElement.videoHeight / 2, videoElement.videoWidth, videoElement.videoHeight);
+                context.restore();
             } else {
-                context.drawImage(videoElement, 0, 0, videoElement.videoWidth, videoElement.videoHeight);
+                tempCanvas.width = videoElement.videoWidth;
+                tempCanvas.height = videoElement.videoHeight;
+                context.drawImage(videoElement, 0, 0, tempCanvas.width, tempCanvas.height);
+            }
+
+            // --- Part 2: THE FIX - Rotate the display container ---
+            // We apply the same rotation class to the container that holds the final image.
+            if (isRotated) {
+                imageDisplayContainer.classList.add('video-rotated');
+            } else {
+                imageDisplayContainer.classList.remove('video-rotated');
             }
             
-            context.restore();
-
+            // --- Part 3: Display the image and proceed ---
             capturedImage.src = tempCanvas.toDataURL('image/jpeg');
             imageDisplayContainer.style.display = 'block';
             drawingCanvas.width = tempCanvas.width;
@@ -278,26 +272,20 @@
             }, 'image/jpeg');
         }
 
+        // --- UPDATED displayResults function to simplify drawing ---
         function displayResults(data) {
             const ctx = drawingCanvas.getContext('2d');
             ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
 
+            // The drawing logic is now simple. We ALWAYS draw the coordinates as they
+            // are received, because the backend ALWAYS sees an upright image.
+            // The CSS rotation of the parent container handles the visual display.
             if (data.data && data.data.bgn_box) {
-                // Adjust drawing coordinates for rotated canvas
-                const w = drawingCanvas.width;
-                const h = drawingCanvas.height;
-                const bgnBoxRotated = data.data.bgn_box.map(p => ({ x: w - p.y, y: p.x }));
-                const eurBoxRotated = data.data.eur_box.map(p => ({ x: w - p.y, y: p.x }));
-                
-                const isRotated = videoElement.classList.contains('video-rotated');
-                if (isRotated) {
-                    drawBoundingBox(ctx, bgnBoxRotated, 'red');
-                    drawBoundingBox(ctx, eurBoxRotated, 'red');
-                } else {
-                    drawBoundingBox(ctx, data.data.bgn_box, 'red');
-                }
+                drawBoundingBox(ctx, data.data.bgn_box, 'red');
+                drawBoundingBox(ctx, data.data.eur_box, 'red');
             }
 
+            // The rest of the function is unchanged...
             let html = `<h3>${data.status}</h3><p>${data.message}</p>`;
             if (data.data && !data.status.toLowerCase().includes('далеч')) {
                 html += `<p>
@@ -307,16 +295,9 @@
                 </p>`;
             }
             resultDiv.innerHTML = html;
-            // Use includes for more robust matching of Bulgarian class names
             resultDiv.className = `result ${data.status.toLowerCase().replace(/\s+/g, '-')}`;
             resultDiv.style.display = 'block';
             resetBtn.style.display = 'block';
-        }
-
-        function displayError(message) {
-            resultDiv.innerHTML = `<h3>ГРЕШКА</h3><p>${message}</p>`;
-            resultDiv.className = 'result грешка';
-            resultDiv.style.display = 'block';
         }
 
         function drawBoundingBox(ctx, vertices, color) {
@@ -329,13 +310,25 @@
             ctx.stroke();
         }
 
+        // --- UPDATED resetApp function to remove the rotation class ---
         function resetApp() {
             resultDiv.style.display = 'none';
             imageDisplayContainer.style.display = 'none';
             resetBtn.style.display = 'none';
+
+            // Also remove the rotation class from the container when we reset
+            imageDisplayContainer.classList.remove('video-rotated');
+
             cameraContainer.style.display = 'block';
             captureBtn.style.display = 'block';
         }
+
+        function displayError(message) {
+            resultDiv.innerHTML = `<h3>ГРЕШКА</h3><p>${message}</p>`;
+            resultDiv.className = 'result грешка';
+            resultDiv.style.display = 'block';
+        }
+
     </script>
 </body>
 </html>
