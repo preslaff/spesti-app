@@ -26,64 +26,53 @@
             box-sizing: border-box;
         }
 
-        /* --- STYLING FOR ALL MAIN CONTAINERS (Placeholder, Camera, Result) --- */
-        #placeholder-container,
-        #camera-container,
-        #image-display-container {
-            width: 100%;
-            aspect-ratio: 1 / 1; /* All containers are perfect squares */
-            position: relative;
-            background-color: #000;
+        /* --- ADDED: Styling for the new placeholder --- */
+        #placeholder-container {
             margin-top: 15px;
+            border: 1px solid #ddd;
             border-radius: 10px;
             overflow: hidden;
-            display: none; /* Initially hide camera and result */
-        }
-        
-        /* Show the placeholder on initial load */
-        #placeholder-container {
-            display: block;
-            border: 1px solid #ddd;
+            display: block; /* Visible by default */
         }
 
         #placeholder-container img {
             width: 100%;
-            height: 100%;
-            object-fit: cover;
+            display: block;
             opacity: 0.9;
         }
 
-        /* --- THE DEFINITIVE VIDEO FIX --- */
+        /* --- Original, Working Styles (No Rotation) --- */
+        #camera-container {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            position: relative;
+            background-color: #000;
+            margin-top: 15px;
+            display: none;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
         #camera-container video {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* This makes the video fill the square without distortion */
+            object-fit: cover;
         }
-
-        .video-rotated {
-            /* This transform is now much simpler. The scale ensures it fills the
-               height of the container after being rotated. 1.78 is approx 16/9. */
-            transform: rotate(90deg) scale(1.78);
-        }
-        /* --- END OF VIDEO FIX --- */
-
-
+        
         #image-display-container {
+            position: relative;
+            margin-top: 15px;
+            display: none;
             border: 1px solid #ddd;
+            border-radius: 10px;
+            overflow: hidden;
         }
 
         #image-display-container img {
             width: 100%;
-            height: 100%;
             display: block;
+            aspect-ratio: 1 / 1;
             object-fit: cover;
-        }
-        
-        .container-rotated {
-            transform: rotate(90deg);
-            /* Scaling the container itself to ensure it fills the same space */
-            transform-origin: center;
-            width: 100%; /* Recalculate width based on parent */
         }
 
         #drawing-canvas {
@@ -93,7 +82,7 @@
             width: 100%;
             height: 100%;
         }
-
+        
         /* Unchanged Button and Result Styling */
         #start-camera-btn, #capture-btn, #reset-btn, #result {
             box-sizing: border-box; width: 100%; margin: 15px 0 0 0; padding: 15px;
@@ -117,12 +106,13 @@
     <div id="app-container">
         <h1>Проверка на Цени BGN / EUR</h1>
 
+        <!-- ADDED: The placeholder image container -->
         <div id="placeholder-container">
             <img src="assets/placeholder.jpg" alt="Пример за сканиране на етикет">
         </div>
 
         <button id="start-camera-btn">Старт на Камерата</button>
-
+        
         <div id="camera-container">
             <video id="camera-stream" playsinline autoplay></video>
         </div>
@@ -136,13 +126,13 @@
 
         <div id="loader" class="loader"></div>
         <div id="result"></div>
-
+        
         <button id="reset-btn">Сканирай Отново</button>
-
     </div>
-    <script src="config.js"></script>
+
+	<script src="config.js"></script>
     <script>
-        // DOM Elements
+        // ADDED: A new DOM Element for the placeholder
         const placeholderContainer = document.getElementById('placeholder-container');
         const startCameraBtn = document.getElementById('start-camera-btn');
         const captureBtn = document.getElementById('capture-btn');
@@ -154,84 +144,46 @@
         const imageDisplayContainer = document.getElementById('image-display-container');
         const capturedImage = document.getElementById('captured-image');
         const drawingCanvas = document.getElementById('drawing-canvas');
-
-        // Event Listeners
+        
         startCameraBtn.addEventListener('click', startCamera);
         captureBtn.addEventListener('click', captureAndVerify);
         resetBtn.addEventListener('click', resetApp);
 
-        // --- MORE ROBUST Orientation Check ---
-        function handleOrientation() {
-            // Using viewport dimensions is often more reliable
-            if (window.innerHeight > window.innerWidth) {
-                console.log("Portrait mode detected, applying rotation.");
-                videoElement.classList.add('video-rotated');
-            } else {
-                console.log("Landscape mode detected, removing rotation.");
-                videoElement.classList.remove('video-rotated');
-            }
-        }
-
         function startCamera() {
-            navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'environment' }
-            }).then(stream => {
-                videoElement.srcObject = stream;
-                
-                // Use a short delay before checking orientation to ensure video metadata is loaded
-                setTimeout(() => {
-                    handleOrientation();
-                    window.screen.orientation.addEventListener('change', handleOrientation);
-                }, 500);
-
-                placeholderContainer.style.display = 'none';
-                startCameraBtn.style.display = 'none';
-                cameraContainer.style.display = 'block';
-                captureBtn.style.display = 'block';
-            }).catch(err => {
-                displayError("Не можах да достъпя камерата. Моля, дайте разрешение.");
-                console.error("Camera Error:", err);
-            });
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then(stream => {
+                    videoElement.srcObject = stream;
+                    
+                    // --- THE ONLY LOGIC CHANGE ---
+                    // Hide the placeholder and show the camera. That's it.
+                    placeholderContainer.style.display = 'none';
+                    startCameraBtn.style.display = 'none';
+                    cameraContainer.style.display = 'block';
+                    captureBtn.style.display = 'block';
+                })
+                .catch(err => {
+                    displayError("Не можах да достъпя камерата. Моля, дайте разрешение.");
+                    console.error("Camera Error:", err);
+                });
         }
 
-        // --- UPDATED captureAndVerify function for simplicity ---
         function captureAndVerify() {
             cameraContainer.style.display = 'none';
             captureBtn.style.display = 'none';
             loader.style.display = 'block';
 
             const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = videoElement.videoWidth;
+            tempCanvas.height = videoElement.videoHeight;
             const context = tempCanvas.getContext('2d');
-            const isRotated = videoElement.classList.contains('video-rotated');
-
-            // --- Canvas drawing logic is now more direct ---
-            if (isRotated) {
-                tempCanvas.width = videoElement.videoHeight;
-                tempCanvas.height = videoElement.videoWidth;
-                context.save();
-                context.translate(tempCanvas.width / 2, tempCanvas.height / 2);
-                context.rotate(90 * Math.PI / 180);
-                context.drawImage(videoElement, -videoElement.videoWidth / 2, -videoElement.videoHeight / 2, videoElement.videoWidth, videoElement.videoHeight);
-                context.restore();
-            } else {
-                tempCanvas.width = videoElement.videoWidth;
-                tempCanvas.height = videoElement.videoHeight;
-                context.drawImage(videoElement, 0, 0, tempCanvas.width, tempCanvas.height);
-            }
-
-            // --- Apply rotation to the display container ---
-            if (isRotated) {
-                imageDisplayContainer.classList.add('container-rotated');
-            } else {
-                imageDisplayContainer.classList.remove('container-rotated');
-            }
+            context.drawImage(videoElement, 0, 0, tempCanvas.width, tempCanvas.height);
             
             capturedImage.src = tempCanvas.toDataURL('image/jpeg');
             imageDisplayContainer.style.display = 'block';
+
             drawingCanvas.width = tempCanvas.width;
             drawingCanvas.height = tempCanvas.height;
 
-            // ... send to backend logic remains the same
             tempCanvas.toBlob(async (blob) => {
                 const formData = new FormData();
                 formData.append('file', blob, 'capture.jpg');
@@ -247,7 +199,6 @@
             }, 'image/jpeg');
         }
 
-        // --- displayResults logic is unchanged ---
         function displayResults(data) {
             const ctx = drawingCanvas.getContext('2d');
             ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
@@ -256,7 +207,7 @@
                 drawBoundingBox(ctx, data.data.bgn_box, 'red');
                 drawBoundingBox(ctx, data.data.eur_box, 'red');
             }
-
+            
             let html = `<h3>${data.status}</h3><p>${data.message}</p>`;
             if (data.data && !data.status.toLowerCase().includes('далеч')) {
                 html += `<p>
@@ -271,21 +222,29 @@
             resetBtn.style.display = 'block';
         }
 
-        // --- drawBoundingBox is unchanged ---
-        function drawBoundingBox(ctx, vertices, color) { /* ... unchanged ... */ }
+        function drawBoundingBox(ctx, vertices, color) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = Math.max(3, ctx.canvas.width * 0.005);
+            ctx.beginPath();
+            ctx.moveTo(vertices[0].x, vertices[0].y);
+            for (let i = 1; i < vertices.length; i++) ctx.lineTo(vertices[i].x, vertices[i].y);
+            ctx.closePath();
+            ctx.stroke();
+        }
 
-        // --- resetApp is unchanged ---
         function resetApp() {
             resultDiv.style.display = 'none';
             imageDisplayContainer.style.display = 'none';
             resetBtn.style.display = 'none';
-            imageDisplayContainer.classList.remove('container-rotated');
             cameraContainer.style.display = 'block';
             captureBtn.style.display = 'block';
         }
 
-        // --- displayError is unchanged ---
-        function displayError(message) { /* ... unchanged ... */ }
+        function displayError(message) {
+            resultDiv.innerHTML = `<h3>ГРЕШКА</h3><p>${message}</p>`;
+            resultDiv.className = 'result грешка';
+            resultDiv.style.display = 'block';
+        }
     </script>
 </body>
 </html>
