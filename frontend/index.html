@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Проверка на Цени</title>
-    <style>
+        <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             display: flex;
@@ -13,63 +13,52 @@
             background-color: #f0f2f5;
             margin: 0;
         }
-
-        h1 { color: #333; text-align: center; }
-
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        /* --- PROBLEM 1 SOLVED: Add padding for "breathing room" --- */
         #app-container {
             width: 100%;
             max-width: 600px;
-            padding: 0 15px;
-            box-sizing: border-box;
+            padding: 0 15px; /* Add 15px of space on the left and right */
+            box-sizing: border-box; /* Ensures padding is inside the width */
         }
 
-        #placeholder-container {
-            margin-top: 15px;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            overflow: hidden;
-            display: block;
-        }
-
-        #placeholder-container img { width: 100%; display: block; opacity: 0.9; }
-
+        /* --- PROBLEM 2 SOLVED: Force a square aspect ratio for the camera --- */
         #camera-container {
             width: 100%;
-            aspect-ratio: 1 / 1;
+            aspect-ratio: 1 / 1; /* This creates a perfect square! */
             position: relative;
             background-color: #000;
             margin-top: 15px;
             display: none;
-            border-radius: 10px;
-            overflow: hidden;
+            border-radius: 10px; /* Optional: adds nice rounded corners */
+            overflow: hidden; /* Hides parts of the video that overflow the square */
         }
-        
-        /* --- THIS IS THE FIX --- */
-        /* It rotates and scales the video to look correct in portrait mode */
         #camera-container video {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            object-fit: cover;
-            transform: rotate(-90deg) scale(1.78); /* Adjust scale if needed */
+            object-fit: cover; /* CRUCIAL: Fills the square without distorting the video */
         }
-        
+       
+        /* Apply the same square style to the captured image for consistency */
         #image-display-container {
             position: relative;
             margin-top: 15px;
             display: none;
             border: 1px solid #ddd;
-            border-radius: 10px;
-            overflow: hidden;
+            border-radius: 10px; /* Match the camera view */
+            overflow: hidden; /* Match the camera view */
         }
-
         #image-display-container img {
             width: 100%;
             display: block;
-            aspect-ratio: 1 / 1;
-            object-fit: cover;
+            aspect-ratio: 1 / 1; /* Make the image display as a square */
+            object-fit: cover; /* Ensure the captured content fills the square */
         }
 
         #drawing-canvas {
@@ -79,37 +68,42 @@
             width: 100%;
             height: 100%;
         }
-        
-        /* Unchanged Button and Result Styling */
+
+        /* --- UNIFIED STYLING FOR BUTTONS AND RESULT --- */
         #start-camera-btn, #capture-btn, #reset-btn, #result {
-            box-sizing: border-box; width: 100%; margin: 15px 0 0 0; padding: 15px;
-            font-size: 1.2em; border-radius: 10px; text-align: center;
+            box-sizing: border-box;
+            width: 100%;
+            margin: 15px 0 0 0;
+            padding: 15px;
+            font-size: 1.2em;
+            border-radius: 10px;
+            text-align: center;
         }
-        #start-camera-btn, #capture-btn, #reset-btn { font-weight: bold; border: none; cursor: pointer; }
+        #start-camera-btn, #capture-btn, #reset-btn {
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+        }
         #start-camera-btn { background-color: #007bff; color: white; }
         #capture-btn { background-color: #dc3545; color: white; display: none; }
         #reset-btn { background-color: #17a2b8; color: white; display: none; }
         #result { display: none; }
+
+        /* --- STATUS COLORS --- */
         .correct { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
         .incorrect { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
         .error { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; }
         .too-far { background-color: #ffc107; border: 1px solid #d39e00; color: #333; }
+       
         .loader { border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; display: none; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-
 <body>
     <div id="app-container">
         <h1>Проверка на Цени BGN / EUR</h1>
-
-        <!-- ADDED: The placeholder image container -->
-        <div id="placeholder-container">
-            <img src="assets/placeholder.jpg" alt="Пример за сканиране на етикет">
-        </div>
-
         <button id="start-camera-btn">Старт на Камерата</button>
-        
+       
         <div id="camera-container">
             <video id="camera-stream" playsinline autoplay></video>
         </div>
@@ -123,17 +117,17 @@
 
         <div id="loader" class="loader"></div>
         <div id="result"></div>
-        
+       
+       
         <button id="reset-btn">Сканирай Отново</button>
-    </div>
 
-	<script src="config.js"></script>
+    </div>
+<script src="config.js"></script>
     <script>
-        // ADDED: A new DOM Element for the placeholder
-        const placeholderContainer = document.getElementById('placeholder-container');
+        //DOM Elements
         const startCameraBtn = document.getElementById('start-camera-btn');
         const captureBtn = document.getElementById('capture-btn');
-        const resetBtn = document.getElementById('reset-btn');
+        const resetBtn = document.getElementById('reset-btn'); // NEW
         const cameraContainer = document.getElementById('camera-container');
         const videoElement = document.getElementById('camera-stream');
         const resultDiv = document.getElementById('result');
@@ -141,71 +135,63 @@
         const imageDisplayContainer = document.getElementById('image-display-container');
         const capturedImage = document.getElementById('captured-image');
         const drawingCanvas = document.getElementById('drawing-canvas');
-        
+       
+
+        //Event Listeners
         startCameraBtn.addEventListener('click', startCamera);
         captureBtn.addEventListener('click', captureAndVerify);
-        resetBtn.addEventListener('click', resetApp);
+        resetBtn.addEventListener('click', resetApp); // NEW
+
+        //Main Functions
 
         function startCamera() {
             navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
                 .then(stream => {
                     videoElement.srcObject = stream;
-                    
-                    // --- THE ONLY LOGIC CHANGE ---
-                    // Hide the placeholder and show the camera. That's it.
-                    placeholderContainer.style.display = 'none';
+                    //Transition to camera view
                     startCameraBtn.style.display = 'none';
                     cameraContainer.style.display = 'block';
                     captureBtn.style.display = 'block';
                 })
                 .catch(err => {
-                    displayError("Не можах да достъпя камерата. Моля, дайте разрешение.");
+                    displayError("Не можах да достъпя камерата. Моля, дайте разрешение и опитайте отново.");
                     console.error("Camera Error:", err);
                 });
         }
 
         function captureAndVerify() {
+            //Hide camera and capture button
             cameraContainer.style.display = 'none';
             captureBtn.style.display = 'none';
             loader.style.display = 'block';
 
+            //Create a temporary canvas to get the image data
             const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = videoElement.videoWidth;
+            tempCanvas.height = videoElement.videoHeight;
             const context = tempCanvas.getContext('2d');
-            
-            // --- THIS IS THE DATA FIX ---
-            // The raw video is landscape (e.g., 1280x720), but we want a portrait capture.
-            // 1. Swap the canvas dimensions to match the desired portrait output.
-            tempCanvas.width = videoElement.videoHeight;
-            tempCanvas.height = videoElement.videoWidth;
-
-            // 2. Rotate the canvas context by -90 degrees (counter-clockwise) to counteract
-            //    the clockwise rotation of the raw video stream.
-            context.rotate(-90 * Math.PI / 180);
-
-            // 3. After rotation, the canvas's coordinate system is shifted. We need to
-            //    translate it back so that when we draw the image at (0,0), it appears
-            //    correctly within the new rotated bounds.
-            context.translate(-tempCanvas.height, 0);
-
-            // 4. Now, draw the original video stream onto the transformed canvas.
-            context.drawImage(videoElement, 0, 0);
-            // --- END OF DATA FIX ---
-            
+            context.drawImage(videoElement, 0, 0, tempCanvas.width, tempCanvas.height);
+           
+            //Display the captured image
             capturedImage.src = tempCanvas.toDataURL('image/jpeg');
             imageDisplayContainer.style.display = 'block';
 
+            //Prepare the drawing canvas
             drawingCanvas.width = tempCanvas.width;
             drawingCanvas.height = tempCanvas.height;
 
+            //Send image to backend
             tempCanvas.toBlob(async (blob) => {
                 const formData = new FormData();
                 formData.append('file', blob, 'capture.jpg');
+               
                 try {
                     const response = await fetch(API_URL, { method: 'POST', body: formData });
                     const data = await response.json();
                     displayResults(data);
                 } catch (error) {
-                    displayError('Не мога да се свържа със сървъра.');
+                    displayError('Не мога да се свържа със сървъра. Работи ли?');
+                    console.error('Fetch Error:', error);
                 } finally {
                     loader.style.display = 'none';
                 }
@@ -216,13 +202,15 @@
             const ctx = drawingCanvas.getContext('2d');
             ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
 
+            //Only draw rectangles if the status is correct/incorrect and we have data
             if (data.data && data.data.bgn_box) {
                 drawBoundingBox(ctx, data.data.bgn_box, 'red');
                 drawBoundingBox(ctx, data.data.eur_box, 'red');
             }
-            
+           
+            //Display text status
             let html = `<h3>${data.status}</h3><p>${data.message}</p>`;
-            if (data.data && !data.status.toLowerCase().includes('далеч')) {
+            if (data.data && data.status.toLowerCase() !== 'too-far') { // Don't show price details on warning
                 html += `<p>
                     <strong>Цена (BGN):</strong> ${data.data.found_bgn.toFixed(2)} лв<br>
                     <strong>Цена (EUR):</strong> €${data.data.found_eur.toFixed(2)}<br>
@@ -230,9 +218,17 @@
                 </p>`;
             }
             resultDiv.innerHTML = html;
-            resultDiv.className = `result ${data.status.toLowerCase().replace(/\s+/g, '-')}`;
+            resultDiv.className = `result ${data.status.toLowerCase()}`;
             resultDiv.style.display = 'block';
+
+            // Show the 'Scan Again' button for all outcomes
             resetBtn.style.display = 'block';
+        }
+
+        function displayError(message) {
+            resultDiv.innerHTML = `<h3>ERROR</h3><p>${message}</p>`;
+            resultDiv.className = 'result error';
+            resultDiv.style.display = 'block';
         }
 
         function drawBoundingBox(ctx, vertices, color) {
@@ -245,19 +241,18 @@
             ctx.stroke();
         }
 
+        // NEW: Function to reset the UI to the camera view
         function resetApp() {
+            // Hide results and the image
             resultDiv.style.display = 'none';
             imageDisplayContainer.style.display = 'none';
             resetBtn.style.display = 'none';
+
+            // Show the live camera and capture button again
             cameraContainer.style.display = 'block';
             captureBtn.style.display = 'block';
         }
 
-        function displayError(message) {
-            resultDiv.innerHTML = `<h3>ГРЕШКА</h3><p>${message}</p>`;
-            resultDiv.className = 'result грешка';
-            resultDiv.style.display = 'block';
-        }
     </script>
 </body>
 </html>
