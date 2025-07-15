@@ -25,41 +25,6 @@
             box-sizing: border-box; /* Ensures padding is inside the width */
         }
 
-        /* --- NEW: Camera preview placeholder --- */
-        #camera-preview {
-            width: 100%;
-            aspect-ratio: 1 / 1;
-            position: relative;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            margin-top: 15px;
-            display: block; /* Show by default */
-            border-radius: 10px;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            color: white;
-            text-align: center;
-        }
-        
-        #camera-preview::before {
-            content: "📱";
-            font-size: 4em;
-            margin-bottom: 15px;
-        }
-        
-        #camera-preview .preview-text {
-            font-size: 1.2em;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        
-        #camera-preview .preview-subtext {
-            font-size: 0.9em;
-            opacity: 0.8;
-        }
-
         /* --- PROBLEM 2 SOLVED: Force a square aspect ratio for the camera --- */
         #camera-container {
             width: 100%;
@@ -137,13 +102,6 @@
 <body>
     <div id="app-container">
         <h1>Проверка на Цени BGN / EUR</h1>
-        
-        <!-- NEW: Camera preview placeholder -->
-        <div id="camera-preview">
-            <div class="preview-text">Сканиране на Цени</div>
-            <div class="preview-subtext">Насочете камерата към етикет с цени в BGN и EUR</div>
-        </div>
-        
         <button id="start-camera-btn">Старт на Камерата</button>
        
         <div id="camera-container">
@@ -169,8 +127,7 @@
         //DOM Elements
         const startCameraBtn = document.getElementById('start-camera-btn');
         const captureBtn = document.getElementById('capture-btn');
-        const resetBtn = document.getElementById('reset-btn');
-        const cameraPreview = document.getElementById('camera-preview'); // NEW
+        const resetBtn = document.getElementById('reset-btn'); // NEW
         const cameraContainer = document.getElementById('camera-container');
         const videoElement = document.getElementById('camera-stream');
         const resultDiv = document.getElementById('result');
@@ -183,7 +140,7 @@
         //Event Listeners
         startCameraBtn.addEventListener('click', startCamera);
         captureBtn.addEventListener('click', captureAndVerify);
-        resetBtn.addEventListener('click', resetApp);
+        resetBtn.addEventListener('click', resetApp); // NEW
 
         //Main Functions
 
@@ -191,8 +148,7 @@
             navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
                 .then(stream => {
                     videoElement.srcObject = stream;
-                    //Transition to camera view - hide preview, show camera
-                    cameraPreview.style.display = 'none'; // NEW
+                    //Transition to camera view
                     startCameraBtn.style.display = 'none';
                     cameraContainer.style.display = 'block';
                     captureBtn.style.display = 'block';
@@ -285,14 +241,14 @@
             ctx.stroke();
         }
 
-        // UPDATED: Function to reset the UI to the camera view (not the initial preview)
+        // NEW: Function to reset the UI to the camera view
         function resetApp() {
             // Hide results and the image
             resultDiv.style.display = 'none';
             imageDisplayContainer.style.display = 'none';
             resetBtn.style.display = 'none';
 
-            // Show the live camera and capture button again (not the preview)
+            // Show the live camera and capture button again
             cameraContainer.style.display = 'block';
             captureBtn.style.display = 'block';
         }
