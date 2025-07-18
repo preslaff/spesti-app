@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Проверка на Цени</title>
-        <style>
+    <!-- Google Maps API will be loaded dynamically after getting the key -->
+    <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             display: flex;
@@ -17,22 +18,85 @@
             color: #333;
             text-align: center;
         }
-        /* --- PROBLEM 1 SOLVED: Add padding for "breathing room" --- */
         #app-container {
             width: 100%;
             max-width: 600px;
-            padding: 0 15px; /* Add 15px of space on the left and right */
-            box-sizing: border-box; /* Ensures padding is inside the width */
+            padding: 0 15px;
+            box-sizing: border-box;
         }
 
-        /* --- NEW: Camera preview placeholder --- */
+        /* Store selection styling */
+        #store-selection {
+            width: 100%;
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+        }
+
+        #store-selection label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        #store-dropdown {
+            width: 100%;
+            padding: 12px;
+            font-size: 1.1em;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            box-sizing: border-box;
+        }
+
+        #store-dropdown:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        /* Mode toggle styling */
+        #mode-toggle {
+            margin-top: 15px;
+            display: flex;
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: transparent;
+            color: #666;
+        }
+
+        .mode-btn.active {
+            background: #007bff;
+            color: white;
+        }
+
+        .mode-btn:hover:not(.active) {
+            background: #f8f9fa;
+        }
+
         #camera-preview {
             width: 100%;
             aspect-ratio: 1 / 1;
             position: relative;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             margin-top: 15px;
-            display: block; /* Show by default */
+            display: block;
             border-radius: 10px;
             overflow: hidden;
             display: flex;
@@ -58,20 +122,19 @@
         #camera-preview .preview-subtext {
             font-size: 1.1em;
             opacity: 0.8;
-			margin-left: 1.5em;
-			margin-right: 1.5em;
+            margin-left: 1.5em;
+            margin-right: 1.5em;
         }
 
-        /* --- PROBLEM 2 SOLVED: Force a square aspect ratio for the camera --- */
         #camera-container {
             width: 100%;
-            aspect-ratio: 1 / 1; /* This creates a perfect square! */
+            aspect-ratio: 1 / 1;
             position: relative;
             background-color: #000;
             margin-top: 15px;
             display: none;
-            border-radius: 10px; /* Optional: adds nice rounded corners */
-            overflow: hidden; /* Hides parts of the video that overflow the square */
+            border-radius: 10px;
+            overflow: hidden;
         }
         #camera-container video {
             position: absolute;
@@ -79,23 +142,22 @@
             left: 0;
             width: 100%;
             height: 100%;
-            object-fit: cover; /* CRUCIAL: Fills the square without distorting the video */
+            object-fit: cover;
         }
        
-        /* Apply the same square style to the captured image for consistency */
         #image-display-container {
             position: relative;
             margin-top: 15px;
             display: none;
             border: 1px solid #ddd;
-            border-radius: 10px; /* Match the camera view */
-            overflow: hidden; /* Match the camera view */
+            border-radius: 10px;
+            overflow: hidden;
         }
         #image-display-container img {
             width: 100%;
             display: block;
-            aspect-ratio: 1 / 1; /* Make the image display as a square */
-            object-fit: cover; /* Ensure the captured content fills the square */
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
         }
 
         #drawing-canvas {
@@ -106,7 +168,6 @@
             height: 100%;
         }
 
-        /* --- UNIFIED STYLING FOR BUTTONS AND RESULT --- */
         #start-camera-btn, #capture-btn, #reset-btn, #result {
             box-sizing: border-box;
             width: 100%;
@@ -126,27 +187,131 @@
         #reset-btn { background-color: #17a2b8; color: white; display: none; }
         #result { display: none; }
 
-        /* --- STATUS COLORS --- */
         .correct { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
         .incorrect { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
         .error { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; }
         .too-far { background-color: #ffc107; border: 1px solid #d39e00; color: #333; }
        
-        .loader { border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; display: none; }
+        .loader { 
+            border: 5px solid #f3f3f3; 
+            border-top: 5px solid #3498db; 
+            border-radius: 50%; 
+            width: 40px; 
+            height: 40px; 
+            animation: spin 1s linear infinite; 
+            margin: 20px auto; 
+            display: none; 
+        }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Result styling enhancements */
+        #result h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        .product-info {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .product-info strong {
+            display: inline-block;
+            min-width: 120px;
+        }
+
+        .product-name {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        /* --- START: NEW CSS FOR HISTORICAL PRICE --- */
+        .historical-info {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(0,0,0,0.1);
+        }
+        .historical-info h4 {
+            margin-top: 0;
+            margin-bottom: 8px;
+        }
+        .price-up { color: #721c24; font-weight: bold; }
+        .price-down { color: #155724; font-weight: bold; }
+        .price-same { color: #333; font-weight: bold; }
+        /* --- END: NEW CSS FOR HISTORICAL PRICE --- */
+
+        /* Map styling */
+        #map-container {
+            width: 100%;
+            height: 400px;
+            margin-top: 15px;
+            border-radius: 10px;
+            overflow: hidden;
+            display: none;
+            border: 1px solid #ddd;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .map-info-window {
+            padding: 10px;
+            max-width: 250px;
+        }
+
+        .map-info-window h4 {
+            margin: 0 0 5px 0;
+            color: #007bff;
+        }
+
+        .map-info-window p {
+            margin: 2px 0;
+            font-size: 0.9em;
+        }
+
+        .price-best {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .price-worst {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
     </style>
 </head>
 <body>
     <div id="app-container">
         <h1>Проверка на Цени BGN / EUR</h1>
         
-        <!-- NEW: Camera preview placeholder -->
+        <div id="store-selection">
+            <label for="store-dropdown">Изберете магазин:</label>
+            <select id="store-dropdown">
+                <option value="">Автоматично разпознаване</option>
+            </select>
+        </div>
+        
+        <div id="mode-toggle">
+            <button class="mode-btn active" id="camera-mode-btn">📷 Камера</button>
+            <button class="mode-btn" id="map-mode-btn">🗺️ Карта</button>
+        </div>
+        
         <div id="camera-preview">
             <div class="preview-text">Сканиране на Цени</div>
             <div class="preview-subtext">Насочете камерата към етикет с цени в BGN и EUR</div>
         </div>
         
+        <div id="map-container">
+            <div id="map"></div>
+        </div>
+        
         <button id="start-camera-btn">Старт на Камерата</button>
+        <button id="show-map-btn" style="display: none;">Покажи Цени на Карта</button>
        
         <div id="camera-container">
             <video id="camera-stream" playsinline autoplay></video>
@@ -162,17 +327,24 @@
         <div id="loader" class="loader"></div>
         <div id="result"></div>
        
-       
         <button id="reset-btn">Сканирай Отново</button>
-
     </div>
-<script src="config.js"></script>
+
     <script>
-        //DOM Elements
+        // Configuration
+        const API_URL = 'http://127.0.0.1:5000/api/verify-prices';
+        const STORES_API_URL = 'http://127.0.0.1:5000/api/stores';
+        const PRICES_API_URL = 'http://127.0.0.1:5000/api/prices';
+        const MAPS_KEY_API_URL = 'http://127.0.0.1:5000/api/maps-key';
+
+        // DOM Elements
         const startCameraBtn = document.getElementById('start-camera-btn');
+        const showMapBtn = document.getElementById('show-map-btn');
         const captureBtn = document.getElementById('capture-btn');
         const resetBtn = document.getElementById('reset-btn');
-        const cameraPreview = document.getElementById('camera-preview'); // NEW
+        const storeDropdown = document.getElementById('store-dropdown');
+        const cameraPreview = document.getElementById('camera-preview');
+        const mapContainer = document.getElementById('map-container');
         const cameraContainer = document.getElementById('camera-container');
         const videoElement = document.getElementById('camera-stream');
         const resultDiv = document.getElementById('result');
@@ -180,21 +352,271 @@
         const imageDisplayContainer = document.getElementById('image-display-container');
         const capturedImage = document.getElementById('captured-image');
         const drawingCanvas = document.getElementById('drawing-canvas');
-       
+        const cameraModeBtn = document.getElementById('camera-mode-btn');
+        const mapModeBtn = document.getElementById('map-mode-btn');
 
-        //Event Listeners
+        // Map variables
+        let map;
+        let markers = [];
+        let currentMode = 'camera';
+        let googleMapsApiKey = null;
+        let googleMapsLoaded = false;
+
+        // Load Google Maps API dynamically
+        async function loadGoogleMapsAPI() {
+            if (googleMapsLoaded) return;
+            
+            try {
+                const response = await fetch(MAPS_KEY_API_URL);
+                const data = await response.json();
+                
+                if (data.api_key) {
+                    googleMapsApiKey = data.api_key;
+                    
+                    // Create script tag for Google Maps API
+                    const script = document.createElement('script');
+                    script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&callback=onGoogleMapsLoaded&loading=async&libraries=marker`;
+                    script.async = true;
+                    script.defer = true;
+                    document.head.appendChild(script);
+                    
+                    console.log('Google Maps API loading...');
+                } else {
+                    console.error('Failed to get Google Maps API key');
+                }
+            } catch (error) {
+                console.error('Error loading Google Maps API key:', error);
+            }
+        }
+
+        // Callback function when Google Maps API is loaded
+        function onGoogleMapsLoaded() {
+            googleMapsLoaded = true;
+            console.log('Google Maps API loaded successfully');
+        }
+
+        // Initialize app
+        async function initApp() {
+            try {
+                const response = await fetch(STORES_API_URL);
+                const data = await response.json();
+                
+                data.stores.forEach(store => {
+                    const option = document.createElement('option');
+                    option.value = store;
+                    option.textContent = store;
+                    storeDropdown.appendChild(option);
+                });
+                
+                // Load Google Maps API
+                await loadGoogleMapsAPI();
+            } catch (error) {
+                console.error('Error loading stores:', error);
+            }
+        }
+
+        // Event Listeners
         startCameraBtn.addEventListener('click', startCamera);
+        showMapBtn.addEventListener('click', showMap);
         captureBtn.addEventListener('click', captureAndVerify);
         resetBtn.addEventListener('click', resetApp);
+        cameraModeBtn.addEventListener('click', () => switchMode('camera'));
+        mapModeBtn.addEventListener('click', () => switchMode('map'));
 
-        //Main Functions
+        // Geolocation Functions
+        function getCurrentLocation() {
+            return new Promise((resolve, reject) => {
+                if (!navigator.geolocation) {
+                    reject(new Error('Geolocation is not supported by this browser.'));
+                    return;
+                }
+                
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        resolve({
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude
+                        });
+                    },
+                    (error) => {
+                        console.error('Geolocation error:', error);
+                        reject(error);
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 300000 // 5 minutes
+                    }
+                );
+            });
+        }
 
+        // Mode switching functions
+        function switchMode(mode) {
+            currentMode = mode;
+            
+            if (mode === 'camera') {
+                cameraModeBtn.classList.add('active');
+                mapModeBtn.classList.remove('active');
+                cameraPreview.style.display = 'flex';
+                mapContainer.style.display = 'none';
+                startCameraBtn.style.display = 'block';
+                showMapBtn.style.display = 'none';
+            } else {
+                mapModeBtn.classList.add('active');
+                cameraModeBtn.classList.remove('active');
+                cameraPreview.style.display = 'none';
+                mapContainer.style.display = 'block';
+                startCameraBtn.style.display = 'none';
+                showMapBtn.style.display = 'block';
+                
+                if (!map && googleMapsLoaded) {
+                    initMap();
+                } else if (!googleMapsLoaded) {
+                    console.warn('Google Maps API not loaded yet, waiting...');
+                    // Wait for Google Maps API to load
+                    setTimeout(() => {
+                        if (googleMapsLoaded && !map) {
+                            initMap();
+                        }
+                    }, 1000);
+                }
+            }
+        }
+
+        function initMap() {
+            if (!googleMapsLoaded) {
+                console.error('Google Maps API not loaded yet');
+                return;
+            }
+            
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 13,
+                center: { lat: 42.6977, lng: 23.3219 }, // Sofia, Bulgaria
+                mapId: '497c310476b8dc221b521953' // Your Map ID for Advanced Markers
+            });
+            
+            getCurrentLocation().then(location => {
+                map.setCenter(location);
+                new google.maps.marker.AdvancedMarkerElement({
+                    position: location,
+                    map: map,
+                    title: 'Вашето местоположение',
+                    content: createUserLocationMarker()
+                });
+            }).catch(err => {
+                console.warn('Could not get user location for map:', err);
+            });
+        }
+
+        function showMap() {
+            loadPriceData();
+        }
+
+        function createUserLocationMarker() {
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <div style="width: 24px; height: 24px; background-color: #007bff; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.3); position: relative;">
+                    <div style="width: 8px; height: 8px; background-color: white; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></div>
+                </div>
+            `;
+            return div;
+        }
+
+        function createPriceMarker(priceData) {
+            const isGoodPrice = priceData.is_best_price;
+            const markerColor = isGoodPrice ? '#28a745' : '#dc3545';
+            
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <div style="width: 32px; height: 32px; background-color: ${markerColor}; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.3); cursor: pointer;">
+                    <span style="color: white; font-size: 14px; font-weight: bold;">${isGoodPrice ? '✓' : '✗'}</span>
+                </div>
+            `;
+            return div;
+        }
+
+        async function loadPriceData() {
+            try {
+                const response = await fetch(PRICES_API_URL);
+                const data = await response.json();
+                
+                clearMarkers();
+                
+                data.prices.forEach(price => {
+                    addPriceMarker(price);
+                });
+                
+            } catch (error) {
+                console.error('Error loading price data:', error);
+            }
+        }
+
+        function createUserLocationMarker() {
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <div style="width: 24px; height: 24px; background-color: #007bff; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.3); position: relative;">
+                    <div style="width: 8px; height: 8px; background-color: white; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></div>
+                </div>
+            `;
+            return div;
+        }
+
+        function createPriceMarker(priceData) {
+            const isGoodPrice = priceData.is_best_price;
+            const markerColor = isGoodPrice ? '#28a745' : '#dc3545';
+            
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <div style="width: 32px; height: 32px; background-color: ${markerColor}; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.3); cursor: pointer;">
+                    <span style="color: white; font-size: 14px; font-weight: bold;">${isGoodPrice ? '✓' : '✗'}</span>
+                </div>
+            `;
+            return div;
+        }
+
+        function addPriceMarker(priceData) {
+            const isGoodPrice = priceData.is_best_price;
+            
+            const marker = new google.maps.marker.AdvancedMarkerElement({
+                position: { lat: priceData.latitude, lng: priceData.longitude },
+                map: map,
+                title: priceData.product_name,
+                content: createPriceMarker(priceData)
+            });
+            
+            const infoWindow = new google.maps.InfoWindow({
+                content: `
+                    <div class="map-info-window">
+                        <h4>${priceData.product_name}</h4>
+                        <p><strong>Магазин:</strong> ${priceData.store_name}</p>
+                        <p><strong>Цена:</strong> <span class="${isGoodPrice ? 'price-best' : 'price-worst'}">${priceData.price_bgn.toFixed(2)} лв</span></p>
+                        <p><strong>Дата:</strong> ${priceData.scan_date}</p>
+                        <p><strong>Статус:</strong> ${isGoodPrice ? 'Добра цена' : 'Висока цена'}</p>
+                    </div>
+                `
+            });
+            
+            marker.addListener('click', () => {
+                infoWindow.open(map, marker);
+            });
+            
+            markers.push(marker);
+        }
+
+        function clearMarkers() {
+            markers.forEach(marker => {
+                marker.setMap(null);
+            });
+            markers = [];
+        }
+
+        // Main Functions
         function startCamera() {
             navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
                 .then(stream => {
                     videoElement.srcObject = stream;
-                    //Transition to camera view - hide preview, show camera
-                    cameraPreview.style.display = 'none'; // NEW
+                    cameraPreview.style.display = 'none';
                     startCameraBtn.style.display = 'none';
                     cameraContainer.style.display = 'block';
                     captureBtn.style.display = 'block';
@@ -205,31 +627,40 @@
                 });
         }
 
-        function captureAndVerify() {
-            //Hide camera and capture button
+        async function captureAndVerify() {
             cameraContainer.style.display = 'none';
             captureBtn.style.display = 'none';
             loader.style.display = 'block';
 
-            //Create a temporary canvas to get the image data
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = videoElement.videoWidth;
             tempCanvas.height = videoElement.videoHeight;
             const context = tempCanvas.getContext('2d');
             context.drawImage(videoElement, 0, 0, tempCanvas.width, tempCanvas.height);
            
-            //Display the captured image
             capturedImage.src = tempCanvas.toDataURL('image/jpeg');
             imageDisplayContainer.style.display = 'block';
 
-            //Prepare the drawing canvas
             drawingCanvas.width = tempCanvas.width;
             drawingCanvas.height = tempCanvas.height;
 
-            //Send image to backend
             tempCanvas.toBlob(async (blob) => {
                 const formData = new FormData();
                 formData.append('file', blob, 'capture.jpg');
+                formData.append('store', storeDropdown.value);
+                
+                // Add geolocation data if automatic detection is selected
+                if (storeDropdown.value === "" || storeDropdown.value === "Автоматично разпознаване") {
+                    try {
+                        const location = await getCurrentLocation();
+                        formData.append('latitude', location.latitude);
+                        formData.append('longitude', location.longitude);
+                        console.log('Location data added:', location);
+                    } catch (error) {
+                        console.warn('Could not get location:', error.message);
+                        // Continue without location data
+                    }
+                }
                
                 try {
                     const response = await fetch(API_URL, { method: 'POST', body: formData });
@@ -248,26 +679,61 @@
             const ctx = drawingCanvas.getContext('2d');
             ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
 
-            //Only draw rectangles if the status is correct/incorrect and we have data
             if (data.data && data.data.bgn_box) {
                 drawBoundingBox(ctx, data.data.bgn_box, 'red');
                 drawBoundingBox(ctx, data.data.eur_box, 'red');
             }
-           
-            //Display text status
-            let html = `<h3>${data.status}</h3><p>${data.message}</p>`;
-            if (data.data && data.status.toLowerCase() !== 'too-far') { // Don't show price details on warning
-                html += `<p>
-                    <strong>Цена (BGN):</strong> ${data.data.found_bgn.toFixed(2)} лв<br>
-                    <strong>Цена (EUR):</strong> €${data.data.found_eur.toFixed(2)}<br>
-                    <strong>Очаквана (EUR):</strong> €${data.data.expected_eur.toFixed(2)}
-                </p>`;
+            
+            // Draw product name bounding box
+            if (data.data && data.data.product_name_box) {
+                drawBoundingBox(ctx, data.data.product_name_box, 'red');
             }
+           
+            let html = `<h3>${data.status}</h3><p>${data.message}</p>`;
+            
+            if (data.data && data.status.toLowerCase() !== 'too-far') {
+                html += `
+                    <div class="product-info">
+                        <p><strong>Продукт:</strong> <span class="product-name">${data.data.product_name}</span></p>
+                        <p><strong>Магазин:</strong> ${data.data.store_name}</p>
+                    </div>
+                    <p>
+                        <strong>Цена (BGN):</strong> ${data.data.found_bgn.toFixed(2)} лв<br>
+                        <strong>Цена (EUR):</strong> €${data.data.found_eur.toFixed(2)}<br>
+                        <strong>Очаквана (EUR):</strong> €${data.data.expected_eur.toFixed(2)}
+                    </p>
+                `;
+
+                // --- START: NEW JAVASCRIPT TO DISPLAY HISTORICAL PRICE ---
+                if (data.data.historical_price) {
+                    const history = data.data.historical_price;
+                    const change = history.price_change_bgn;
+                    let changeHtml;
+
+                    if (change > 0) {
+                        changeHtml = `<span class="price-up">+${change.toFixed(2)} лв (поскъпване)</span>`;
+                    } else if (change < 0) {
+                        changeHtml = `<span class="price-down">${change.toFixed(2)} лв (поевтиняване)</span>`;
+                    } else {
+                        changeHtml = `<span class="price-same">0.00 лв (без промяна)</span>`;
+                    }
+                    
+                    html += `
+                        <div class="historical-info">
+                            <h4>Сравнение с предишно сканиране</h4>
+                            <p>
+                                <strong>Последна цена:</strong> ${history.last_price_bgn.toFixed(2)} лв (на ${history.last_scan_date})<br>
+                                <strong>Промяна:</strong> ${changeHtml}
+                            </p>
+                        </div>
+                    `;
+                }
+                // --- END: NEW JAVASCRIPT ---
+            }
+            
             resultDiv.innerHTML = html;
             resultDiv.className = `result ${data.status.toLowerCase()}`;
             resultDiv.style.display = 'block';
-
-            // Show the 'Scan Again' button for all outcomes
             resetBtn.style.display = 'block';
         }
 
@@ -287,18 +753,15 @@
             ctx.stroke();
         }
 
-        // UPDATED: Function to reset the UI to the camera view (not the initial preview)
         function resetApp() {
-            // Hide results and the image
             resultDiv.style.display = 'none';
             imageDisplayContainer.style.display = 'none';
             resetBtn.style.display = 'none';
-
-            // Show the live camera and capture button again (not the preview)
             cameraContainer.style.display = 'block';
             captureBtn.style.display = 'block';
         }
 
+        initApp();
     </script>
 </body>
 </html>

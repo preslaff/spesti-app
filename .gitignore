@@ -2,6 +2,11 @@
 # This is the MOST IMPORTANT line. Never commit your secret credentials.
 backend/gcp_credentials.json
 frontend/config.js
+.env
+*.pyc
+__pycache__/
+gcp_credentials.json
+.ipynb_checkpoints/
 
 # Also ignore any other potential key files
 *.pem
