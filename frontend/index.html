@@ -96,10 +96,9 @@
             position: relative;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             margin-top: 15px;
-            display: block;
+            display: flex;
             border-radius: 10px;
             overflow: hidden;
-            display: flex;
             align-items: center;
             justify-content: center;
             flex-direction: column;
@@ -361,6 +360,62 @@
         let currentMode = 'camera';
         let googleMapsApiKey = null;
         let googleMapsLoaded = false;
+        let hasScannedResults = false;
+        
+        // Camera stream management
+        let currentCameraStream = null;
+        let isStreamActive = false;
+
+        // Camera cleanup functions
+        function stopCameraStream() {
+            if (currentCameraStream) {
+                console.log('Stopping camera stream...');
+                const tracks = currentCameraStream.getTracks();
+                tracks.forEach(track => {
+                    track.stop();
+                    console.log('Stopped track:', track.kind);
+                });
+                currentCameraStream = null;
+                isStreamActive = false;
+                videoElement.srcObject = null;
+            }
+        }
+
+        function cleanupCameraResources() {
+            stopCameraStream();
+            // Clear any pending video operations
+            if (videoElement) {
+                videoElement.pause();
+                videoElement.currentTime = 0;
+            }
+        }
+
+        function stopCameraAndReset() {
+            stopCameraStream();
+            
+            // Reset to preview mode
+            resultDiv.style.display = 'none';
+            imageDisplayContainer.style.display = 'none';
+            resetBtn.style.display = 'none';
+            cameraPreview.style.display = 'flex';
+            startCameraBtn.style.display = 'block';
+            cameraContainer.style.display = 'none';
+            captureBtn.style.display = 'none';
+            hasScannedResults = false;
+            
+            console.log('Camera stopped and app reset to preview mode');
+        }
+
+        // Page cleanup - prevent memory leaks
+        window.addEventListener('beforeunload', () => {
+            console.log('Page unloading, cleaning up camera resources...');
+            cleanupCameraResources();
+        });
+
+        window.addEventListener('pagehide', () => {
+            console.log('Page hidden, cleaning up camera resources...');
+            cleanupCameraResources();
+        });
 
         // Load Google Maps API dynamically
         async function loadGoogleMapsAPI() {
@@ -417,7 +472,6 @@
 
         // Event Listeners
         startCameraBtn.addEventListener('click', startCamera);
-        showMapBtn.addEventListener('click', showMap);
         captureBtn.addEventListener('click', captureAndVerify);
         resetBtn.addEventListener('click', resetApp);
         cameraModeBtn.addEventListener('click', () => switchMode('camera'));
@@ -458,28 +512,64 @@
             if (mode === 'camera') {
                 cameraModeBtn.classList.add('active');
                 mapModeBtn.classList.remove('active');
-                cameraPreview.style.display = 'flex';
                 mapContainer.style.display = 'none';
-                startCameraBtn.style.display = 'block';
                 showMapBtn.style.display = 'none';
+                
+                // Show appropriate camera mode based on whether we have results
+                if (hasScannedResults) {
+                    // User has scan results - show results state
+                    cameraPreview.style.display = 'none';
+                    startCameraBtn.style.display = 'none';
+                    cameraContainer.style.display = 'none';
+                    captureBtn.style.display = 'none';
+                    // Restore scan results and reset button
+                    resultDiv.style.display = 'block';
+                    resetBtn.style.display = 'block';
+                    imageDisplayContainer.style.display = 'block';
+                } else {
+                    // No results yet - show initial camera state
+                    cameraPreview.style.display = 'flex';
+                    startCameraBtn.style.display = 'block';
+                    cameraContainer.style.display = 'none';
+                    captureBtn.style.display = 'none';
+                    resultDiv.style.display = 'none';
+                    resetBtn.style.display = 'none';
+                    imageDisplayContainer.style.display = 'none';
+                }
             } else {
                 mapModeBtn.classList.add('active');
                 cameraModeBtn.classList.remove('active');
+                
+                // Hide ALL camera-related elements when in map mode
                 cameraPreview.style.display = 'none';
-                mapContainer.style.display = 'block';
                 startCameraBtn.style.display = 'none';
-                showMapBtn.style.display = 'block';
+                cameraContainer.style.display = 'none';
+                captureBtn.style.display = 'none';
+                resultDiv.style.display = 'none';
+                resetBtn.style.display = 'none';
+                imageDisplayContainer.style.display = 'none';
+                showMapBtn.style.display = 'none';
+                
+                // Show only the map
+                mapContainer.style.display = 'block';
+                
+                // Stop camera stream when switching to map mode
+                stopCameraStream();
                 
                 if (!map && googleMapsLoaded) {
                     initMap();
+                    loadPriceData(); // Auto-load price data when map is created
                 } else if (!googleMapsLoaded) {
                     console.warn('Google Maps API not loaded yet, waiting...');
                     // Wait for Google Maps API to load
                     setTimeout(() => {
                         if (googleMapsLoaded && !map) {
                             initMap();
+                            loadPriceData(); // Auto-load price data when map is created
                         }
                     }, 1000);
+                } else if (map) {
+                    loadPriceData(); // Map already exists, just load price data
                 }
             }
         }
@@ -509,9 +599,6 @@
             });
         }
 
-        function showMap() {
-            loadPriceData();
-        }
 
         function createUserLocationMarker() {
             const div = document.createElement('div');
@@ -552,29 +639,6 @@
             }
         }
 
-        function createUserLocationMarker() {
-            const div = document.createElement('div');
-            div.innerHTML = `
-                <div style="width: 24px; height: 24px; background-color: #007bff; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.3); position: relative;">
-                    <div style="width: 8px; height: 8px; background-color: white; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></div>
-                </div>
-            `;
-            return div;
-        }
-
-        function createPriceMarker(priceData) {
-            const isGoodPrice = priceData.is_best_price;
-            const markerColor = isGoodPrice ? '#28a745' : '#dc3545';
-            
-            const div = document.createElement('div');
-            div.innerHTML = `
-                <div style="width: 32px; height: 32px; background-color: ${markerColor}; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.3); cursor: pointer;">
-                    <span style="color: white; font-size: 14px; font-weight: bold;">${isGoodPrice ? '✓' : '✗'}</span>
-                </div>
-            `;
-            return div;
-        }
-
         function addPriceMarker(priceData) {
             const isGoodPrice = priceData.is_best_price;
             
@@ -613,17 +677,28 @@
 
         // Main Functions
         function startCamera() {
+            // Clean up any existing stream first
+            if (isStreamActive) {
+                stopCameraStream();
+            }
+
             navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
                 .then(stream => {
+                    currentCameraStream = stream;
                     videoElement.srcObject = stream;
+                    isStreamActive = true;
+                    
                     cameraPreview.style.display = 'none';
                     startCameraBtn.style.display = 'none';
                     cameraContainer.style.display = 'block';
                     captureBtn.style.display = 'block';
+                    
+                    console.log('Camera stream started successfully');
                 })
                 .catch(err => {
                     displayError("Не можах да достъпя камерата. Моля, дайте разрешение и опитайте отново.");
                     console.error("Camera Error:", err);
+                    cleanupCameraResources();
                 });
         }
 
@@ -735,6 +810,7 @@
             resultDiv.className = `result ${data.status.toLowerCase()}`;
             resultDiv.style.display = 'block';
             resetBtn.style.display = 'block';
+            hasScannedResults = true;
         }
 
         function displayError(message) {
@@ -754,11 +830,28 @@
         }
 
         function resetApp() {
+            // Hide results and captured image
             resultDiv.style.display = 'none';
             imageDisplayContainer.style.display = 'none';
             resetBtn.style.display = 'none';
-            cameraContainer.style.display = 'block';
-            captureBtn.style.display = 'block';
+            hasScannedResults = false;
+            
+            // Keep camera active for better UX - go directly to camera view
+            if (isStreamActive && currentCameraStream) {
+                // Camera is already active, just show the camera interface
+                cameraPreview.style.display = 'none';
+                startCameraBtn.style.display = 'none';
+                cameraContainer.style.display = 'block';
+                captureBtn.style.display = 'block';
+                console.log('Reset to active camera - ready for next scan');
+            } else {
+                // Camera not active, show preview mode
+                cameraPreview.style.display = 'flex';
+                startCameraBtn.style.display = 'block';
+                cameraContainer.style.display = 'none';
+                captureBtn.style.display = 'none';
+                console.log('Reset to camera preview mode');
+            }
         }
 
         initApp();
